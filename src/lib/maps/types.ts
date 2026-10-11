@@ -43,5 +43,13 @@ export interface MapInfo {
 
 /** What the browser gets back from POST /api/maps. */
 export type LoadMapResponse =
-  | { ok: true; map: MapInfo }
-  | { ok: false; error: string; reason?: "not_generated" };
+  | { ok: true; status: "ready"; map: MapInfo }
+  | {
+      ok: true;
+      status: "pending";
+      /** "queued" = waiting its turn, "generating" = the generator is building it now. */
+      state: "queued" | "generating";
+      /** 1 = next in line. Null while generating or if unknown. */
+      queuePosition: number | null;
+    }
+  | { ok: false; error: string };

@@ -32,7 +32,7 @@ The full original brief is in the first message of the project; this captures th
 | Stage | What | Status |
 |---|---|---|
 | 1 | Next.js setup, seed + size form, map viewer, demo island | ✅ done |
-| 1b | Map generator + Supabase (cache + job queue) | ⏳ next |
+| 1b | Map generator + Supabase (cache + job queue) | 🟡 website + database done; generator next |
 | 2 | Map layers (monuments, roads, rail, rivers, recyclers, biomes) + `.map` upload + screenshot fallback | |
 | 3 | Requirements panel + scoring engine (Web Worker) | |
 | 4 | Pins + info panel (pros/cons, wipe tips, base designs) | |
@@ -43,7 +43,9 @@ The full original brief is in the first message of the project; this captures th
 
 ## Stage 1b plan (map generator)
 
-**Blocker:** the dev cloud environment needs **Full** network access to download SteamCMD, the Rust
+**Generator blocker:** network is now open, but this session's auto-mode safety check denied downloading and
+running SteamCMD/the Rust server. The owner must approve that (or add a Bash permission rule) before
+the generator can be developed and tested here. Earlier note: the dev cloud environment needed **Full** network access to download SteamCMD, the Rust
 dedicated server (~10 GB) and Oxide (umod.org). The owner changed the setting; it applies to new sessions.
 Verified in the cloud container: 15 GB RAM, 4 CPUs and ≥14 GB writable disk, enough to test-run a Rust server.
 
@@ -58,10 +60,10 @@ Verified in the cloud container: 15 GB RAM, 4 CPUs and ≥14 GB writable disk, e
    start it with `+server.seed`, `+server.worldsize`, `+server.level "Procedural Map"`, minimal settings,
    wait for the export, compress it into a map package, upload to Supabase Storage, and mark the job done.
    Poll Supabase for queued jobs. Beginner setup script + instructions for the owner's PC.
-3. **Supabase:** `maps` table (key, seed, size, status, package path, timestamps), `map_jobs` queue,
+3. ✅ **Supabase** (done, `supabase/migrations/20261011000000_maps.sql`, tested on local Postgres 16): `maps` table (key, seed, size, status, package path, timestamps), `map_jobs` queue,
    Storage bucket for packages and images, RLS rules (public read of finished maps; only the generator,
    via its service key, writes).
-4. **Website:** `/api/maps` queues a job when a map isn't generated yet; the UI shows "generating…
+4. ✅ **Website** (done): `/api/maps` queues a job when a map isn't generated yet; the UI shows "generating…
    (about 5–10 min)" and polls. `src/lib/maps/cache.ts` gets a Supabase implementation.
 
 ## Useful facts
