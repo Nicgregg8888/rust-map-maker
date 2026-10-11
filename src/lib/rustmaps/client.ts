@@ -59,6 +59,8 @@ export async function fetchMapFromRustMaps(link: ParsedMapLink): Promise<Fetched
   switch (res.status) {
     case 200:
       break;
+    case 400:
+      throw new RustMapsError("RustMaps says that map size is out of range (1000–6000).", 400);
     case 401:
     case 403:
       // Our key problem, not the user's. Log it for the site owner.
@@ -74,11 +76,20 @@ export async function fetchMapFromRustMaps(link: ParsedMapLink): Promise<Fetched
         "RustMaps is still generating this map. Give it a minute or two, then try again.",
         409,
       );
-    case 429:
-      throw new RustMapsError("Too many map requests right now. Please try again in a minute.", 429);
+    case 429: {
+      // Our shared key hit RustMaps' rate limit. meta.errors says when to retry.
+      const reason = await errorText(res);
+      console.warn(`[rustmaps] rate limited: ${reason ?? "no reason given"}`);
+      throw new RustMapsError("Lots of people are loading maps right now. Please try again in a minute.", 429);
+    }
     default:
       console.error(`[rustmaps] unexpected status ${res.status}`);
       throw new RustMapsError("RustMaps returned an error. Please try again later.", 502);
+  }
+
+  const remaining = res.headers.get("X-Rate-Limit-Remaining");
+  if (remaining !== null && Number(remaining) < 10) {
+    console.warn(`[rustmaps] only ${remaining} API calls left until ${res.headers.get("X-Rate-Limit-Reset")}`);
   }
 
   const body: unknown = await res.json().catch(() => null);
@@ -88,6 +99,13 @@ export async function fetchMapFromRustMaps(link: ParsedMapLink): Promise<Fetched
   }
 
   return { info: toMapInfo(link, data), downloadUrl: str(data.downloadUrl) };
+}
+
+/** Reads RustMaps' `meta.errors` from a failed response, if there is one. */
+async function errorText(res: Response): Promise<string | null> {
+  const body = (await res.json().catch(() => null)) as { meta?: { errors?: unknown } } | null;
+  const errors = body?.meta?.errors;
+  return Array.isArray(errors) && errors.length ? errors.map(String).join("; ") : null;
 }
 
 // ---- Converting RustMaps' format into ours --------------------------------
@@ -116,6 +134,7 @@ interface RawMap {
   canyons?: unknown;
   oases?: unknown;
   buildableRocks?: unknown;
+  waterPipes?: unknown;
   estimatedDeletionDate?: unknown;
 }
 
@@ -158,6 +177,7 @@ function toMapInfo(link: ParsedMapLink, d: RawMap): MapInfo {
       canyons: num(d.canyons),
       oases: num(d.oases),
       buildableRocks: num(d.buildableRocks),
+      waterPipes: num(d.waterPipes),
     },
     estimatedDeletionDate: str(d.estimatedDeletionDate),
     fetchedAt: new Date().toISOString(),

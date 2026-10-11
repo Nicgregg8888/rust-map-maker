@@ -47,6 +47,7 @@ export const DEMO_MAP: MapInfo = {
     canyons: 0,
     oases: 0,
     buildableRocks: 0,
+    waterPipes: 0,
   },
   estimatedDeletionDate: null,
   fetchedAt: "2026-01-01T00:00:00.000Z",

@@ -70,7 +70,7 @@ export function MapInfoPanel({ map }: { map: MapInfo }) {
         {map.mapFileAvailable ? (
           <p>The game&apos;s .map file is available, so exact roads, rivers and heights can be used (coming in Stage 2).</p>
         ) : (
-          <p>No .map file download for this map. Roads, rivers and terrain will be <em>estimated</em> from the map image (coming in Stage 2).</p>
+          <p>RustMaps only shares .map files for custom maps, so roads, rivers and terrain will be <em>estimated</em> from the map image (coming in Stage 2).</p>
         )}
       </section>
     </div>
