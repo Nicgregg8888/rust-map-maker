@@ -17,11 +17,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-edge px-4 py-3 text-center text-xs text-muted">
-        Map data and images from{" "}
-        <a className="underline hover:text-ink" href="https://rustmaps.com" target="_blank" rel="noreferrer">
-          RustMaps.com
-        </a>
-        . Rust Base Finder is a fan project, not affiliated with Facepunch Studios or RustMaps.
+        Rust Base Finder is a fan project, not affiliated with or endorsed by Facepunch Studios.
       </footer>
     </div>
   );

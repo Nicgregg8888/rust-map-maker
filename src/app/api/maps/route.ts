@@ -1,21 +1,22 @@
-// POST /api/maps   body: { "link": "https://rustmaps.com/map/4500_123456" }
+// POST /api/maps   body: { "seed": 123456, "size": 4500 }   or   { "demo": true }
 //
-// Checks the link, then returns the map from our cache, or fetches it from
-// RustMaps (using the secret API key, which never leaves the server).
+// Checks the seed + size, then returns the map if it has already been
+// generated. Requesting generation of new maps is added with the generator.
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-import { getOrLoad } from "@/lib/maps/cache";
-import { DEMO_MAP, DEMO_MAP_KEY } from "@/lib/maps/demo";
+import { mapStore } from "@/lib/maps/cache";
+import { DEMO_MAP } from "@/lib/maps/demo";
+import { parseMapRequest } from "@/lib/maps/mapRequest";
 import type { LoadMapResponse } from "@/lib/maps/types";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
-import { fetchMapFromRustMaps, RustMapsError } from "@/lib/rustmaps/client";
-import { parseMapLink } from "@/lib/rustmaps/parseLink";
 
-const Body = z.object({ link: z.string().max(500) });
+const Body = z.union([
+  z.object({ demo: z.literal(true) }),
+  z.object({ seed: z.union([z.string().max(20), z.number()]), size: z.union([z.string().max(10), z.number()]) }),
+]);
 
-// How many map loads one visitor can do per minute. Cached maps are cheap,
-// but this stops one person from hammering RustMaps through our key.
+// How many map loads one visitor can do per minute.
 const LIMIT = { limit: 20, windowMs: 60_000 };
 
 export async function POST(req: NextRequest) {
@@ -28,27 +29,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const parsedBody = Body.safeParse(await req.json().catch(() => null));
-  if (!parsedBody.success) return json({ ok: false, error: "Bad request." }, 400);
+  const body = Body.safeParse(await req.json().catch(() => null));
+  if (!body.success) return json({ ok: false, error: "Bad request." }, 400);
+  if ("demo" in body.data) return json({ ok: true, map: DEMO_MAP });
 
-  const input = parsedBody.data.link.trim();
-  if (input.toLowerCase() === DEMO_MAP_KEY) {
-    return json({ ok: true, map: DEMO_MAP, cached: true });
-  }
+  const request = parseMapRequest(body.data.seed, body.data.size);
+  if (!request.ok) return json({ ok: false, error: request.error }, 400);
 
-  const link = parseMapLink(input);
-  if (!link.ok) return json({ ok: false, error: link.error }, 400);
+  const map = await mapStore.get(request.value.key);
+  if (map) return json({ ok: true, map });
 
-  try {
-    const { value, cached } = await getOrLoad(link.value.key, () =>
-      fetchMapFromRustMaps(link.value),
-    );
-    return json({ ok: true, map: value.info, cached });
-  } catch (err) {
-    if (err instanceof RustMapsError) return json({ ok: false, error: err.message }, err.status);
-    console.error("[api/maps] unexpected error", err);
-    return json({ ok: false, error: "Something went wrong loading that map." }, 500);
-  }
+  return json(
+    {
+      ok: false,
+      reason: "not_generated",
+      error: "This map hasn't been generated yet, and the map generator isn't connected yet. Try the demo map for now.",
+    },
+    404,
+  );
 }
 
 function json(body: LoadMapResponse, status = 200, headers?: Record<string, string>) {

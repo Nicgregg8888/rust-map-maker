@@ -8,7 +8,7 @@ const display = Oswald({ variable: "--font-oswald", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Rust Base Finder",
   description:
-    "Paste a RustMaps link and find the best places to build your base, scored for your group size, playstyle and wipe stage.",
+    "Enter your server's map seed and size and find the best places to build your base, scored for your group size, playstyle and wipe stage.",
 };
 
 export const viewport: Viewport = {

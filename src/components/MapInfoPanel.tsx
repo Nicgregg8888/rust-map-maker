@@ -19,22 +19,14 @@ export function MapInfoPanel({ map }: { map: MapInfo }) {
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
           <Row label="Size" value={`${map.size} m`} />
           <Row label="Seed" value={map.seed ?? "—"} />
-          {map.isCustomMap && <Row label="Type" value="Custom map" />}
-          {map.isStaging && <Row label="Branch" value="Staging" />}
-          <Row label="Land" value={map.stats.landPercentage != null ? `${round(map.stats.landPercentage)}%` : "—"} />
-          <Row label="Rivers / lakes" value={`${map.stats.rivers ?? "—"} / ${map.stats.lakes ?? "—"}`} />
+          <Row label="Source" value={SOURCE_LABEL[map.source]} />
         </dl>
-        {map.pageUrl && (
-          <a className="mt-2 inline-block text-rust underline hover:text-rust-bright" href={map.pageUrl} target="_blank" rel="noreferrer">
-            View on RustMaps.com ↗
-          </a>
-        )}
       </section>
 
       {map.biomes && (
         <section>
           <h2 className="font-display text-lg uppercase tracking-wider">Biomes</h2>
-          <p className="text-xs text-muted">Share of the whole map (RustMaps only gives totals, not locations).</p>
+          <p className="text-xs text-muted">Share of the land area.</p>
           <ul className="mt-2 flex flex-col gap-1">
             {Object.entries(map.biomes).map(([name, pct]) => (
               <li key={name} className="flex items-center gap-2">
@@ -64,18 +56,15 @@ export function MapInfoPanel({ map }: { map: MapInfo }) {
             ))}
         </ul>
       </section>
-
-      <section className="text-xs text-muted">
-        <h2 className="font-display text-sm uppercase tracking-wider text-ink">Terrain detail</h2>
-        {map.mapFileAvailable ? (
-          <p>The game&apos;s .map file is available, so exact roads, rivers and heights can be used (coming in Stage 2).</p>
-        ) : (
-          <p>RustMaps only shares .map files for custom maps, so roads, rivers and terrain will be <em>estimated</em> from the map image (coming in Stage 2).</p>
-        )}
-      </section>
     </div>
   );
 }
+
+const SOURCE_LABEL: Record<MapInfo["source"], string> = {
+  generated: "Generated",
+  upload: "Uploaded .map",
+  demo: "Demo",
+};
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (

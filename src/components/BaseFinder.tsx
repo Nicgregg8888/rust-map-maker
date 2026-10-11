@@ -1,12 +1,12 @@
 "use client";
 
-// The main screen: paste a link → load the map → show it with its details.
+// The main screen: enter seed + size → load the map → show it with its details.
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
 import type { LoadMapResponse, MapInfo } from "@/lib/maps/types";
-import { LinkForm } from "./LinkForm";
 import { MapInfoPanel } from "./MapInfoPanel";
+import { MapRequestForm, type MapRequestInput } from "./MapRequestForm";
 
 // Leaflet needs the browser's `window`, so only load it in the browser.
 const MapView = dynamic(() => import("./MapView"), {
@@ -19,14 +19,14 @@ export function BaseFinder() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function load(link: string) {
+  async function load(input: MapRequestInput) {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/maps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ link }),
+        body: JSON.stringify(input),
       });
       const data = (await res.json().catch(() => null)) as LoadMapResponse | null;
       if (!data) throw new Error("bad response");
@@ -41,7 +41,7 @@ export function BaseFinder() {
 
   return (
     <>
-      <LinkForm onSubmit={load} loading={loading} serverError={error} />
+      <MapRequestForm onSubmit={load} loading={loading} serverError={error} />
 
       <div className="flex flex-1 flex-col gap-4 lg:flex-row">
         <section className="relative h-[60vh] min-h-80 overflow-hidden rounded border border-edge lg:h-auto lg:min-h-[70vh] lg:flex-1">
@@ -49,7 +49,7 @@ export function BaseFinder() {
             <MapView key={map.key} map={map} />
           ) : (
             <MapPlaceholder
-              text={loading ? "Fetching map…" : "Paste a RustMaps link above, or try the demo map."}
+              text={loading ? "Fetching map…" : "Enter your server's map seed and size above, or try the demo map."}
             />
           )}
         </section>

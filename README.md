@@ -1,15 +1,27 @@
 # Rust Base Finder
 
-Paste a [RustMaps](https://rustmaps.com) link and find the best places to build a base,
+Enter your Rust server's **map seed and size** and find the best places to build a base,
 scored for your group size, playstyle, server and wipe stage.
 
-> Fan project. Not affiliated with Facepunch Studios or RustMaps. Map data and images © RustMaps.com.
+> Fan project. Not affiliated with or endorsed by Facepunch Studios.
+
+## Where the map data comes from
+
+We don't use any third-party map website. Map data comes from:
+
+1. **Our own map generator** (main source). A Rust dedicated server builds the map from its
+   seed and size, and a small plugin exports monuments, roads, rail, rivers, height and biomes.
+   Each map is generated once and saved for everyone.
+2. **`.map` file upload**, for server owners (exact data).
+3. **Screenshot upload** of the in-game map, as a fallback for anyone (analysed in the
+   browser, never stored; terrain is estimated and labelled as such).
 
 ## Status
 
 | Stage | What | Done? |
 |---|---|---|
-| 1 | Project setup + load a map from a RustMaps link | ✅ |
+| 1 | Project setup + load a map from seed and size | ✅ |
+| 1b | Map generator + database (Supabase) | ⏳ |
 | 2 | Map layers (monuments, roads, rail, recyclers, biomes) | ⏳ |
 | 3 | Requirements panel + scoring engine | ⏳ |
 | 4 | Pins + info panel (pros/cons, wipe tips, base designs) | ⏳ |
@@ -43,25 +55,7 @@ npm install
 
 `npm install` downloads the libraries the project uses. It takes a minute or two.
 
-### 3. Add your RustMaps API key (optional, demo mode works without it)
-
-1. Log in at <https://rustmaps.com> and open your **dashboard** (<https://rustmaps.com/dashboard>).
-2. Find the **API key** section and copy your key.
-3. In the project folder, make a copy of `.env.example` named **`.env.local`**:
-   - Mac/Linux: `cp .env.example .env.local`
-   - Windows PowerShell: `Copy-Item .env.example .env.local`
-4. Open `.env.local` in a text editor and paste the key after the `=`:
-   ```
-   RUSTMAPS_API_KEY=your-key-here
-   ```
-
-> 🔒 **Keep your key secret.**
-> - Put it ONLY in `.env.local`. That file is ignored by git, so it never gets uploaded to GitHub.
-> - Never paste it into `.env.example`, into code, into a GitHub issue, or into chat.
-> - The key is only ever used by the server part of the site. Browsers never see it.
-> - If it leaks, create a new key on the RustMaps dashboard. That cancels the old one.
-
-### 4. Start the site
+### 3. Start the site
 
 ```bash
 npm run dev
@@ -72,17 +66,15 @@ Open <http://localhost:3000> in your browser. To stop the site, press **Ctrl+C**
 ## Testing Stage 1
 
 1. Click **Try demo**. A sample island loads; you can zoom and drag it, and the side panel shows "DEMO DATA".
-2. Paste `https://google.com` and click **Load map**. You get a clear error.
-3. Paste `https://rustmaps.com/map/banana`. You get a "couldn't find size and seed" error.
-4. With your API key set: paste a real link like `https://rustmaps.com/map/4500_123456`.
-   The real map image loads, with seed, size, biomes and monument list.
-   Load the same link again: it comes from the cache (no second RustMaps request).
-5. Without an API key, a real link says the site isn't connected to RustMaps yet. That's expected.
+2. Type `abc` as the seed and click **Load map**. You get a clear error.
+3. Type seed `123` and size `999`. You get a "size must be from 1000 to 6000" error.
+4. Type seed `123` and size `4500`. You get "this map hasn't been generated yet". That's expected
+   until the map generator is connected (Stage 1b).
 
 Automatic checks (run these before committing):
 
 ```bash
-npm test          # unit tests (link parsing)
+npm test          # unit tests (seed/size checks)
 npm run lint      # code style
 npm run typecheck # TypeScript errors
 npm run build     # full production build
@@ -91,32 +83,27 @@ npm run build     # full production build
 ## How it fits together
 
 ```
-Browser (React + Leaflet)                 Our server (Next.js API routes)            RustMaps
-─────────────────────────                 ───────────────────────────────            ────────
-paste link ─► parseMapLink (instant check)
-           ─► POST /api/maps ───────────► rate limit ─► check link again
-                                          ─► cache hit? return it
-                                          ─► else fetch with secret key ───────────► /v4/maps/...
-◄──────────── map info (no secrets) ◄──── save in cache ◄──────────────────────────
+Browser (React + Leaflet)               Our server (Next.js API routes)       Map generator (Stage 1b)
+─────────────────────────               ───────────────────────────────       ───────────────────────
+seed + size ─► instant check
+            ─► POST /api/maps ────────► rate limit ─► check again
+                                        ─► already generated? return it ◄──── saves finished maps
+◄────────────── map data ◄──────────────
 ```
 
 | Folder / file | What it is |
 |---|---|
 | `src/app/page.tsx` | The home page |
-| `src/app/api/maps/route.ts` | Server route that loads maps (uses the API key) |
-| `src/components/` | Page pieces: link form, map view, info panel |
-| `src/lib/rustmaps/parseLink.ts` | Understands pasted RustMaps links |
-| `src/lib/rustmaps/client.ts` | Talks to the RustMaps API (server only) |
-| `src/lib/maps/cache.ts` | Map cache (memory now, Supabase database in Stage 6) |
+| `src/app/api/maps/route.ts` | Server route that loads maps |
+| `src/components/` | Page pieces: seed/size form, map view, info panel |
+| `src/lib/maps/mapRequest.ts` | Checks the seed and size people type in |
+| `src/lib/maps/cache.ts` | Store of generated maps (memory now, Supabase database next) |
 | `src/lib/maps/demo.ts`, `public/demo/` | The made-up demo island |
 | `src/app/globals.css` | Colours and theme |
 | `.env.example` | List of secret settings (template, no real values) |
 
 ## Notes and limits (Stage 1)
 
-- **The cache lives in server memory for now.** It works while running locally, but it resets
-  when the server restarts. In Stage 6 it moves to the Supabase database, so each map
-  is fetched from RustMaps only once, ever.
+- **Generated maps are kept in server memory for now**, and the generator isn't connected yet,
+  so only the demo map loads. Stage 1b adds the generator and the Supabase database.
 - **Rate limit:** 20 map loads per minute per visitor (in `src/app/api/maps/route.ts`).
-- RustMaps only gives **map-wide biome percentages**, not where each biome is. Positions come from
-  the `.map` file (when downloadable) or image analysis in Stage 2.
