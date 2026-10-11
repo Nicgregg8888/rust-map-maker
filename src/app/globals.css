@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Dark, gritty survival palette. Change colours here and the whole site follows. */
+@theme {
+  --color-ground: #11100e;      /* page background */
+  --color-panel: #1b1916;       /* cards / side panels */
+  --color-panel-2: #24211d;     /* inputs, raised bits */
+  --color-edge: #3a352e;        /* borders */
+  --color-ink: #ddd6c8;         /* main text */
+  --color-muted: #948b7c;       /* secondary text */
+  --color-rust: #c4561f;        /* accent (buttons, highlights) */
+  --color-rust-bright: #e06a2c;
+  --color-danger: #d04a3a;
+  --color-ok: #7fa35a;
+  --color-warn: #d9a441;
+}
+
+/* Fonts come from next/font in layout.tsx. */
+@theme inline {
+  --font-sans: var(--font-inter), sans-serif;
+  --font-display: var(--font-oswald), sans-serif;
+}
+
+html,
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+}
+
+/* Subtle grain so flat panels feel less "clean app" and more worn metal. */
+body {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+/* Leaflet's default light grey background behind the map image. */
+/* Doubled class beats leaflet.css, which loads after this file. */
+.leaflet-container.leaflet-container {
+  background: #16262e;
+  font-family: var(--font-inter), sans-serif;
+}
